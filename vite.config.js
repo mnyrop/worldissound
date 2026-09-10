@@ -12,6 +12,9 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
+			paths: {
+				base: process.env.NODE_ENV === 'production' ? '/worldissound' : ''
+			},
 			adapter: adapter()
 		})
 	]
