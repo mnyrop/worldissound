@@ -12,15 +12,10 @@
 	let imageNaturalWidth = $state(1);
 	let imageNaturalHeight = $state(1);
 	let activeItem = $state(null);
-	let audioElements = $state({});
 	let playingBySrc = $state({});
-
-	const gridArea = {
-		x: 40,
-		y: 40,
-		w: 20,
-		h: 40
-	};
+	const audioIdBySrc = Object.fromEntries(
+		drawnItems.map((item, index) => [item.audio, `drawn-audio-${index}`])
+	);
 
 	const stage = $derived(
 		getCoverStage({
@@ -61,11 +56,18 @@
 	function toggleItemPlayback(item) {
 		if (!item?.audio) return;
 
-		const audioEl = audioElements[item.audio];
-		if (!audioEl) return;
+		const audioId = audioIdBySrc[item.audio];
+		const maybeAudioEl = audioId ? document.getElementById(audioId) : null;
+		const audioEl = maybeAudioEl instanceof HTMLAudioElement ? maybeAudioEl : null;
+
+		if (!audioEl) {
+			console.error('Audio element not found for selected item.', { item });
+			return;
+		}
 
 		if (audioEl.paused) {
-			audioEl.play().catch(() => {
+			audioEl.play().catch((error) => {
+				console.error('Failed to start audio playback.', { item, error });
 				setPlayingState(item.audio, false);
 			});
 			return;
@@ -99,14 +101,19 @@
 			style={`position: absolute; left: ${stage.stageLeft}px; top: ${stage.stageTop}px; width: ${stage.stageWidth}px; height: ${stage.stageHeight}px;`}
 		>
 			<img
-				src={`${base}/draft.jpeg`}
+				src={`${base}/background.jpeg`}
 				alt="Draft"
 				draggable="false"
 				onload={handleImageLoad}
 				style="display: block; width: 100%; height: 100%; user-select: none;"
 			/>
 
-			<DrawnGrid items={drawnItems} {gridArea} onSelect={handleItemSelect} {playingBySrc} />
+			<DrawnGrid
+				items={drawnItems}
+				onSelect={handleItemSelect}
+				{playingBySrc}
+				activeAudio={activeItem?.audio ?? null}
+			/>
 		</div>
 
 		{#if activeItem}
@@ -120,7 +127,7 @@
 
 		{#each drawnItems as item (item.audio)}
 			<audio
-				bind:this={audioElements[item.audio]}
+				id={audioIdBySrc[item.audio]}
 				src={item.audio}
 				onplay={() => {
 					setPlayingState(item.audio, true);
