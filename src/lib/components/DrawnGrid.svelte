@@ -29,6 +29,11 @@
 		return chunks;
 	}
 
+	function firstWord(label) {
+		if (!label) return '';
+		return label.trim().split(/\s+/)[0] ?? '';
+	}
+
 	function clampRowStart(nextStart) {
 		return Math.max(0, Math.min(nextStart, maxRowStart));
 	}
@@ -159,6 +164,7 @@
 						{#each row as item}
 							{@const isPlaying = Boolean(playingBySrc[item.audio])}
 							{@const isOpen = activeAudio === item.audio || isPlaying}
+							{@const labelWord = firstWord(item.label) || '—'}
 							<div class="group relative w-full" style="aspect-ratio: 1482 / 902;">
 								<div
 									aria-hidden="true"
@@ -183,7 +189,15 @@
 									onclick={() => {
 										onSelect(item);
 									}}
-								></button>
+								>
+									<span
+										aria-hidden="true"
+										style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999;"
+										class="pointer-events-none roundedpx-2 py-1 text-center text-xs leading-none tracking-wide whitespace-nowrap text-black font-mono font-extralight"
+									>
+										{labelWord}
+									</span>
+								</button>
 							</div>
 						{/each}
 					</div>
