@@ -13,6 +13,7 @@
 	let imageNaturalHeight = $state(1);
 	let activeItem = $state(null);
 	let playingBySrc = $state({});
+	let audioMetricsBySrc = $state({});
 	const audioIdBySrc = Object.fromEntries(
 		drawnItems.map((item, index) => [item.audio, `drawn-audio-${index}`])
 	);
@@ -53,12 +54,29 @@
 		};
 	}
 
-	function toggleItemPlayback(item) {
-		if (!item?.audio) return;
+	function setAudioMetrics(src, nextMetrics) {
+		audioMetricsBySrc = {
+			...audioMetricsBySrc,
+			[src]: {
+				currentTime: 0,
+				duration: 0,
+				volume: 1,
+				playbackRate: 1,
+				...(audioMetricsBySrc[src] ?? {}),
+				...nextMetrics
+			}
+		};
+	}
 
+	function getAudioElement(item) {
+		if (!item?.audio) return null;
 		const audioId = audioIdBySrc[item.audio];
 		const maybeAudioEl = audioId ? document.getElementById(audioId) : null;
-		const audioEl = maybeAudioEl instanceof HTMLAudioElement ? maybeAudioEl : null;
+		return maybeAudioEl instanceof HTMLAudioElement ? maybeAudioEl : null;
+	}
+
+	function toggleItemPlayback(item) {
+		const audioEl = getAudioElement(item);
 
 		if (!audioEl) {
 			console.error('Audio element not found for selected item.', { item });
@@ -76,7 +94,42 @@
 		audioEl.pause();
 	}
 
+	function seekActiveItemAudio(seconds) {
+		if (!activeItem) return;
+		const audioEl = getAudioElement(activeItem);
+		if (!audioEl) return;
+		if (!Number.isFinite(audioEl.duration) || audioEl.duration <= 0) return;
+
+		audioEl.currentTime = Math.min(Math.max(seconds, 0), audioEl.duration);
+	}
+
+	function setActiveItemVolume(volume) {
+		if (!activeItem) return;
+		const audioEl = getAudioElement(activeItem);
+		if (!audioEl) return;
+
+		audioEl.volume = Math.min(1, Math.max(0, volume));
+	}
+
+	function setActiveItemPlaybackRate(rate) {
+		if (!activeItem) return;
+		const audioEl = getAudioElement(activeItem);
+		if (!audioEl) return;
+
+		audioEl.playbackRate = Math.min(2, Math.max(0.5, rate));
+	}
+
 	const isActiveItemPlaying = $derived(Boolean(activeItem && playingBySrc[activeItem.audio]));
+	const activeAudioMetrics = $derived(
+		activeItem
+			? (audioMetricsBySrc[activeItem.audio] ?? {
+					currentTime: 0,
+					duration: 0,
+					volume: 1,
+					playbackRate: 1
+				})
+			: { currentTime: 0, duration: 0, volume: 1, playbackRate: 1 }
+	);
 
 	onMount(() => {
 		measureViewport();
@@ -122,6 +175,13 @@
 				onClose={closeOverlay}
 				isPlaying={isActiveItemPlaying}
 				onTogglePlayback={() => toggleItemPlayback(activeItem)}
+				currentTime={activeAudioMetrics.currentTime}
+				duration={activeAudioMetrics.duration}
+				volume={activeAudioMetrics.volume}
+				playbackRate={activeAudioMetrics.playbackRate}
+				onSeek={seekActiveItemAudio}
+				onVolumeChange={setActiveItemVolume}
+				onPlaybackRateChange={setActiveItemPlaybackRate}
 			/>
 		{/if}
 
@@ -129,6 +189,7 @@
 			<audio
 				id={audioIdBySrc[item.audio]}
 				src={item.audio}
+				loop
 				onplay={() => {
 					setPlayingState(item.audio, true);
 				}}
@@ -137,6 +198,34 @@
 				}}
 				onended={() => {
 					setPlayingState(item.audio, false);
+				}}
+				onloadedmetadata={(event) => {
+					const audioEl = event.currentTarget;
+					setAudioMetrics(item.audio, {
+						duration: Number.isFinite(audioEl.duration) ? audioEl.duration : 0,
+						currentTime: audioEl.currentTime || 0,
+						volume: audioEl.volume,
+						playbackRate: audioEl.playbackRate
+					});
+				}}
+				ontimeupdate={(event) => {
+					const audioEl = event.currentTarget;
+					setAudioMetrics(item.audio, {
+						currentTime: audioEl.currentTime || 0,
+						duration: Number.isFinite(audioEl.duration) ? audioEl.duration : 0
+					});
+				}}
+				onvolumechange={(event) => {
+					const audioEl = event.currentTarget;
+					setAudioMetrics(item.audio, {
+						volume: audioEl.volume
+					});
+				}}
+				onratechange={(event) => {
+					const audioEl = event.currentTarget;
+					setAudioMetrics(item.audio, {
+						playbackRate: audioEl.playbackRate
+					});
 				}}
 			>
 				<track kind="captions" />

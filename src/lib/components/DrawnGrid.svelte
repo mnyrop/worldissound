@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 
 	let { items = [], onSelect = () => {}, playingBySrc = {}, activeAudio = null } = $props();
 
@@ -166,6 +167,17 @@
 							{@const isOpen = activeAudio === item.audio || isPlaying}
 							{@const labelWord = firstWord(item.label) || '—'}
 							<div class="group relative w-full" style="aspect-ratio: 1482 / 902;">
+								{#if isPlaying}
+									<div
+										aria-hidden="true"
+										style={`z-index: ${rowZBase + 2};`}
+										class="reverb-layer pointer-events-none absolute top-0 right-0 left-0 h-0"
+									>
+										<span class="reverb-wave reverb-wave-1"></span>
+										<span class="reverb-wave reverb-wave-2"></span>
+										<span class="reverb-wave reverb-wave-3"></span>
+									</div>
+								{/if}
 								<div
 									aria-hidden="true"
 									class="pointer-events-none absolute top-0 right-0 bottom-2.5 left-0 rounded-md bg-gray-500"
@@ -181,10 +193,10 @@
 								></div>
 								<button
 									type="button"
-									style={`z-index: ${rowZBase + 2}; height: 100%; width: 100%; background-image: url('/drawer.png'); background-size: cover; background-position: center;`}
+									style={`z-index: ${rowZBase + 3}; height: 100%; width: 100%; background-image: url('${base}/drawer.png'); background-size: cover; background-position: center;`}
 									class={`relative cursor-pointer rounded-md transition-[background-color,transform] duration-600 ease-in-out hover:translate-y-2.5 ${
 										isOpen ? 'translate-y-2.5' : ''
-									} ${isPlaying ? 'bg-blue-200' : 'bg-gray-200'}`}
+									} ${isPlaying ? 'bg-orange-100' : 'bg-orange-50'}`}
 									aria-label={item.label}
 									onclick={() => {
 										onSelect(item);
@@ -193,7 +205,7 @@
 									<span
 										aria-hidden="true"
 										style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999;"
-										class="pointer-events-none roundedpx-2 py-1 text-center text-xs leading-none tracking-wide whitespace-nowrap text-black font-mono font-extralight"
+										class="roundedpx-2 pointer-events-none py-1 text-center font-mono text-xs leading-none font-extralight tracking-wide whitespace-nowrap text-black"
 									>
 										{labelWord}
 									</span>
@@ -218,5 +230,39 @@
 
 	.group:hover .paper-playing {
 		transform: translateY(-1.375rem) rotate(0deg);
+	}
+
+	.reverb-wave {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: 56%;
+		height: 20px;
+		border-radius: 999px 999px 0 0;
+		border: 2px solid gray;
+		border-bottom: 0;
+		opacity: 0;
+		transform: translate(-50%, 0) scale(0.96);
+		animation: reverb-pulse 1.5s ease-out infinite;
+	}
+
+	.reverb-wave-2 {
+		animation-delay: 0.35s;
+	}
+
+	.reverb-wave-3 {
+		animation-delay: 0.7s;
+	}
+
+	@keyframes reverb-pulse {
+		0% {
+			opacity: 0.55;
+			transform: translate(-50%, 0) scale(0.96);
+		}
+
+		100% {
+			opacity: 0;
+			transform: translate(-50%, -18px) scale(1.28);
+		}
 	}
 </style>
