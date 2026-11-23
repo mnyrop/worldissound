@@ -30,9 +30,47 @@
 		return chunks;
 	}
 
-	function firstWord(label) {
+	function abbreviateTitle(label, maxLength = 14) {
 		if (!label) return '';
-		return label.trim().split(/\s+/)[0] ?? '';
+		const normalized = label.trim();
+		if (normalized.length <= maxLength) return normalized;
+		return `${normalized.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`;
+	}
+
+	function numberToWord(value) {
+		const ones = [
+			'zero',
+			'one',
+			'two',
+			'three',
+			'four',
+			'five',
+			'six',
+			'seven',
+			'eight',
+			'nine',
+			'ten',
+			'eleven',
+			'twelve',
+			'thirteen',
+			'fourteen',
+			'fifteen',
+			'sixteen',
+			'seventeen',
+			'eighteen',
+			'nineteen'
+		];
+		const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+		const safeValue = Number.isFinite(value) ? Math.floor(value) : 0;
+
+		if (safeValue < 20) return ones[safeValue] ?? String(safeValue);
+		if (safeValue < 100) {
+			const tenValue = Math.floor(safeValue / 10);
+			const remainder = safeValue % 10;
+			return remainder === 0 ? tens[tenValue] : `${tens[tenValue]}-${ones[remainder]}`;
+		}
+
+		return String(safeValue);
 	}
 
 	function clampRowStart(nextStart) {
@@ -148,25 +186,33 @@
 </script>
 
 <div style="position: absolute; inset: 0;">
+<!-- Container for the drawn grid -->
 	<div
 		bind:this={containerEl}
 		class="pointer-events-auto absolute top-[38%] left-[39%] box-border w-[22%] rounded-md outline-none sm:left-[36%] sm:w-[28%] md:left-[34%] md:w-[32%]"
 		style="bottom: 6%;"
 		onwheel={handleWheel}
 	>
+		<!-- Grid wrapper -->
 		<div
 			class="box-border flex flex-col gap-4 overflow-visible md:gap-6"
 			style={`height: ${viewportHeight}px; max-height: 100%; padding-top: ${rowTopClearancePx}px; padding-bottom: ${rowBottomClearancePx}px;`}
 		>
 			{#each visibleRows as row, rowIndex (`row-${rowStart + rowIndex}`)}
 				{@const rowZBase = (rowIndex + 1) * 10}
+				<!-- Individual row -->
 				<div class="drawer-row relative block w-full">
 					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-6">
-						{#each row as item}
+						{#each row as item, columnIndex}
+							<!-- Individual item -->
 							{@const isPlaying = Boolean(playingBySrc[item.audio])}
 							{@const isOpen = activeAudio === item.audio || isPlaying}
-							{@const labelWord = firstWord(item.label) || '—'}
+							{@const drawerNumber = (rowStart + rowIndex) * columns + columnIndex + 1}
+							{@const onewordLabel = item.oneword?.trim?.() ?? ''}
+							{@const labelWord = onewordLabel || numberToWord(drawerNumber)}
+							{@const paperTitle = isPlaying ? abbreviateTitle(item.label) : '??????'}
 							<div class="group relative w-full" style="aspect-ratio: 1482 / 902;">
+								<!--Sound playing indicator -->
 								{#if isPlaying}
 									<div
 										aria-hidden="true"
@@ -178,19 +224,33 @@
 										<span class="reverb-wave reverb-wave-3"></span>
 									</div>
 								{/if}
+								<!-- Gray inner drawer -->
 								<div
 									aria-hidden="true"
 									class="pointer-events-none absolute top-0 right-0 bottom-2.5 left-0 rounded-md bg-gray-500"
 								></div>
+								<!-- Paper layer -->
 								<div
 									aria-hidden="true"
 									style={`z-index: ${rowZBase + 1};`}
-									class={`paper-layer pointer-events-none absolute top-2 right-2 left-2 h-1/2 rounded-sm border bg-white transition-transform duration-600 ease-in-out ${
+									class={`paper-layer pointer-events-none absolute -top-1 right-0 left-0 mx-auto w-[90%] aspect-[362/218] rounded-sm transition-transform duration-600 ease-in-out ${
 										!isPlaying ? 'group-hover:-translate-y-5.5' : ''
 									} ${isOpen && !isPlaying ? '-translate-y-5.5' : ''} ${
 										isPlaying ? 'paper-playing' : ''
 									}`}
-								></div>
+								>
+									<div class="relative h-full w-full overflow-hidden rounded-sm bg-[#f3e6cf]">
+										<div
+											class="absolute inset-0 bg-[linear-gradient(90deg,transparent_0,transparent_11%,rgba(239,68,68,0.35)_11%,rgba(239,68,68,0.35)_11.7%,transparent_11.7%),repeating-linear-gradient(180deg,transparent_0,transparent_27px,rgba(59,130,246,0.25)_28px)]"
+										></div>
+										<div class="relative ml-[12%] flex h-full w-[84%] px-[4%] pt-[7%]">
+											<span class="block max-w-[80%] truncate font-mono text-[10px] font-bold tracking-wide text-stone-900">
+												{paperTitle}
+											</span>
+										</div>
+									</div>
+								</div>
+								<!-- Drawer front -->
 								<button
 									type="button"
 									style={`z-index: ${rowZBase + 3}; height: 100%; width: 100%; background-image: url('${base}/drawer.png'); background-size: cover; background-position: center;`}
@@ -202,6 +262,7 @@
 										onSelect(item);
 									}}
 								>
+									<!-- Drawer label -->
 									<span
 										aria-hidden="true"
 										style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999;"

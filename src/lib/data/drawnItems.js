@@ -3,7 +3,8 @@ export const drawnItems = [
 		label: 'I want to go to Morrow',
 		audio:
 			'https://tile.loc.gov/streaming-services/iiif/service:mbrsrs:mbrsjukebox:dlc_victor_12_01_b12_11:dlc_victor_12_01_b12_11/full/full/0/full/default.mp3',
-		src: 'https://www.loc.gov/item/jukebox-1016/'
+		src: 'https://www.loc.gov/item/jukebox-1016/',
+		oneword: ''
 	},
 	{
 		label: 'Unidentified commercial recording of Russian choral music',
